@@ -241,6 +241,22 @@ def consultar_detalhes_venda(num_venda, empresa, obra):
     except Exception as e:
         st.error(f"Erro inesperado: {e}")
 
+def gerar_html_extrato(df, total_val_parc_paga, total_vl_confirm, total_vl_menor):
+    estilo = """
+    <style>
+    table {border-collapse: collapse; width: 100%;}
+    th, td {border: 1px solid #dddddd; text-align: center; padding: 8px;}
+    th {background-color: #f2f2f2;}
+    </style>
+    """
+    html = estilo + df.to_html(index=False)
+    html += f"""
+    <p><b>Total Valor Pago:</b> {formatar_para_real(total_val_parc_paga)}</p>
+    <p><b>Total Valor Confirmado:</b> {formatar_para_real(total_vl_confirm)}</p>
+    <p><b>Valor para Usar na Quitação:</b> {formatar_para_real(total_vl_menor)}</p>
+    """
+    return html
+
 def mostrar_valores_pagos(num_venda, empresa, obra):
     columns, results = get_detalhes_venda(num_venda, empresa, obra)
     if results:
@@ -276,12 +292,32 @@ def mostrar_valores_pagos(num_venda, empresa, obra):
                 total_vl_menor += vl_menor
         
         # Criar o DataFrame
-        df = pd.DataFrame(data, columns=["Tipo", "Parc.", "Dt. Recebe", "Val. Parc. Paga", "Vl. Confirm.", "Vl. Menor", "Diferença"])
-        
+        df = pd.DataFrame(
+            data,
+            columns=[
+                "Tipo",
+                "Parc.",
+                "Dt. Recebe",
+                "Val. Parc. Paga",
+                "Vl. Confirm.",
+                "Vl. Menor",
+                "Diferença",
+            ],
+        )
+
         # Exibir a tabela no Streamlit
         st.write("### Valores Pagos:")
         st.dataframe(df)  # Exibe a tabela de forma interativa
-        
+
+        if st.button("Imprimir Extrato"):
+            extrato_html = gerar_html_extrato(
+                df, total_val_parc_paga, total_vl_confirm, total_vl_menor
+            )
+            st.markdown(extrato_html, unsafe_allow_html=True)
+            st.markdown(
+                "<script>window.print();</script>", unsafe_allow_html=True
+            )
+
         # Exibir os totais
         st.success(f"**Total Valor Pago:** {formatar_para_real(total_val_parc_paga)}")
         st.success(f"**Total Valor Confirmado:** {formatar_para_real(total_vl_confirm)}")
